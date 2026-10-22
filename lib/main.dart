@@ -15,7 +15,7 @@ Future<void> main() async {
 
   await Supabase.initialize(
     url: AppConfig.supabaseUrl,
-    anonKey: AppConfig.supabaseAnonKey,
+    publishableKey: AppConfig.supabasePublishableKey,
   );
   await DailyNotificationService.instance.initialize();
   runApp(const YasserApp());
@@ -53,7 +53,7 @@ class ConfigurationRequiredApp extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.all(24),
             child: Text(
-              'Falta configurar SUPABASE_URL, SUPABASE_ANON_KEY y BARBER_ID '
+              'Falta configurar SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY y BARBER_ID '
               'al compilar la aplicación. Consulta el README.',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.titleMedium,

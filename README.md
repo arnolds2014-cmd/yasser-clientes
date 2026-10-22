@@ -37,13 +37,13 @@ python tool/prepare_android.py
 flutter pub get
 flutter analyze
 flutter test
-flutter run --dart-define=SUPABASE_URL=https://TU_PROYECTO.supabase.co --dart-define=SUPABASE_ANON_KEY=TU_ANON_KEY --dart-define=BARBER_ID=UUID_DEL_BARBERO
+flutter run --dart-define=SUPABASE_URL=https://TU_PROYECTO.supabase.co --dart-define=SUPABASE_PUBLISHABLE_KEY=TU_CLAVE_PUBLISHABLE --dart-define=BARBER_ID=UUID_DEL_BARBERO
 ```
 
 Para compilar localmente:
 
 ```powershell
-flutter build apk --debug --dart-define=SUPABASE_URL=https://TU_PROYECTO.supabase.co --dart-define=SUPABASE_ANON_KEY=TU_ANON_KEY --dart-define=BARBER_ID=UUID_DEL_BARBERO
+flutter build apk --debug --dart-define=SUPABASE_URL=https://TU_PROYECTO.supabase.co --dart-define=SUPABASE_PUBLISHABLE_KEY=TU_CLAVE_PUBLISHABLE --dart-define=BARBER_ID=UUID_DEL_BARBERO
 ```
 
 El APK queda en `build\app\outputs\flutter-apk\app-debug.apk`. Si no se proporcionan las tres opciones `--dart-define`, la app mostrará la pantalla de configuración faltante en lugar de fallar al iniciar.
@@ -53,7 +53,7 @@ El APK queda en `build\app\outputs\flutter-apk\app-debug.apk`. Si no se proporci
 El workflow [android-debug.yml](./.github/workflows/android-debug.yml) genera los archivos nativos Android, analiza el código, ejecuta pruebas y construye el APK debug. Para activarlo:
 
 1. Usa el repositorio nuevo [`arnolds2014-cmd/yasser-clientes`](https://github.com/arnolds2014-cmd/yasser-clientes), no el repositorio contable. El repositorio nuevo está público; el código no debe incluir contraseñas, `service_role` ni claves privadas. Si prefieres que el código no sea público, cambia su visibilidad a privado en GitHub Settings.
-2. En Settings → Secrets and variables → Actions, crea los secretos `SUPABASE_URL` y `SUPABASE_ANON_KEY`, y la variable `BARBER_ID` con el UUID del barbero.
+2. En Settings → Secrets and variables → Actions, crea los secretos `SUPABASE_URL` y `SUPABASE_PUBLISHABLE_KEY`, y la variable `BARBER_ID` con el UUID del barbero. Usa la clave Publishable (antes llamada anon) del proyecto Supabase, nunca una Secret key.
 3. Desde esta carpeta, conecta el repositorio local ya inicializado y sube la rama `main`:
 
    ```powershell
@@ -63,7 +63,7 @@ El workflow [android-debug.yml](./.github/workflows/android-debug.yml) genera lo
 
 4. En GitHub → Actions, abre el workflow “Android debug APK”. Al completarse correctamente, descarga `clientes-de-barberia-debug-apk` desde los artifacts de la ejecución.
 
-En cada `push`, el workflow ejecuta análisis y pruebas. Si los valores de Supabase están configurados, también compila el APK conectado; si faltan, omite el APK y deja un aviso para no producir un paquete que parezca operativo pero no pueda comunicarse. `pull_request` solo ejecuta análisis y pruebas para no exponer secretos a contribuciones externas.
+En cada `push`, el workflow ejecuta análisis, pruebas y compila un APK. Con los valores de Supabase configurados, el artifact se llama `clientes-de-barberia-debug-apk` y queda conectado al backend. Si faltan, genera `clientes-de-barberia-debug-apk-sin-supabase`; ese APK sirve para probar la interfaz, pero mostrará que falta configuración y no podrá comunicarse con clientes. `pull_request` solo ejecuta análisis y pruebas para no exponer secretos a contribuciones externas.
 
 ## Alcance de mensajes y notificaciones
 

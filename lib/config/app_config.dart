@@ -1,11 +1,12 @@
 class AppConfig {
   static const supabaseUrl = String.fromEnvironment('SUPABASE_URL');
-  static const supabaseAnonKey = String.fromEnvironment('SUPABASE_ANON_KEY');
+  static const supabasePublishableKey =
+      String.fromEnvironment('SUPABASE_PUBLISHABLE_KEY');
   static const barberId = String.fromEnvironment('BARBER_ID');
 
   static bool get isConfigured =>
       supabaseUrl.startsWith('https://') &&
-      supabaseAnonKey.isNotEmpty &&
+      supabasePublishableKey.isNotEmpty &&
       _isUuid(barberId);
 
   static bool _isUuid(String value) => RegExp(

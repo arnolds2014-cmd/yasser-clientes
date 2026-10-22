@@ -6,7 +6,7 @@ void main() {
     await tester.pumpWidget(const ConfigurationRequiredApp());
 
     expect(
-      find.textContaining('SUPABASE_URL'),
+      find.textContaining('SUPABASE_PUBLISHABLE_KEY'),
       findsOneWidget,
     );
   });
