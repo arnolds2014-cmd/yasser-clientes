@@ -27,6 +27,8 @@ Supabase Auth acepta correo y contraseña; `username` es el nombre visible del p
 
 6. Realtime se añade a `public.profiles` y `public.messages` mediante el SQL. La lista del barbero se actualiza al registrarse nuevos clientes.
 
+Si el registro/login funciona pero no aparecen clientes o no se pueden enviar mensajes, ejecuta [`supabase/diagnostics.sql`](./supabase/diagnostics.sql) en SQL Editor y verifica que `barber_profiles`, `barber_setting_rows` y `valid_barber_settings` sean `1`, y que `messages_realtime_enabled` y `profiles_realtime_enabled` sean `true`. `client_profiles` debe ser mayor que cero cuando ya se hayan registrado clientes. La consulta no devuelve correos, claves ni UUIDs.
+
 ## Ejecutar en Windows
 
 Instala Flutter estable, Android Studio (Android SDK) y un JDK 17. Abre PowerShell en esta carpeta:
