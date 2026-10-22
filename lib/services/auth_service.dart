@@ -33,6 +33,7 @@ class AuthService {
 
   Future<void> signOut() async {
     await PushNotificationService.instance.unregisterCurrentUser();
+    await PushNotificationService.instance.dispose();
     await _client.auth.signOut();
   }
 }

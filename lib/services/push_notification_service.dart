@@ -22,35 +22,56 @@ class PushNotificationService {
     if (_initialized) return;
     _initialized = true;
 
-    const channel = AndroidNotificationChannel(
-      _channelId,
-      _channelName,
-      description: 'Avisos de mensajes nuevos en el chat de YASSER',
-      importance: Importance.high,
-    );
-    const initializationSettings = InitializationSettings(
-      android: AndroidInitializationSettings('@mipmap/ic_launcher'),
-    );
-    await _notifications.initialize(initializationSettings);
-    await _notifications
-        .resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin
-        >()
-        ?.createNotificationChannel(channel);
+    try {
+      const channel = AndroidNotificationChannel(
+        _channelId,
+        _channelName,
+        description: 'Avisos de mensajes nuevos en el chat de YASSER',
+        importance: Importance.high,
+      );
+      const initializationSettings = InitializationSettings(
+        android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+      );
+      await _notifications.initialize(initializationSettings);
+      await _notifications
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >()
+          ?.createNotificationChannel(channel);
 
-    await FirebaseMessaging.instance.requestPermission();
-    _messageSubscription = FirebaseMessaging.onMessage.listen(
-      _showForegroundNotification,
+      await FirebaseMessaging.instance.requestPermission();
+      _messageSubscription = FirebaseMessaging.onMessage.listen(
+        _showForegroundNotification,
+      );
+      _tokenSubscription = FirebaseMessaging.instance.onTokenRefresh.listen(
+        _saveTokenForCurrentUser,
+      );
+      _authSubscription =
+          Supabase.instance.client.auth.onAuthStateChange.listen((state) {
+            if (state.session != null) unawaited(_registerCurrentUser());
+          });
+      await _registerCurrentUser();
+    } catch (_) {
+      await dispose();
+      rethrow;
+    }
+  }
+
+  Future<void> dispose() async {
+    final subscriptions = [
+      _authSubscription,
+      _tokenSubscription,
+      _messageSubscription,
+    ];
+    await Future.wait(
+      subscriptions.whereType<StreamSubscription<dynamic>>().map(
+        (subscription) => subscription.cancel(),
+      ),
     );
-    _tokenSubscription = FirebaseMessaging.instance.onTokenRefresh.listen(
-      _saveTokenForCurrentUser,
-    );
-    _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen((
-      state,
-    ) {
-      if (state.session != null) unawaited(_registerCurrentUser());
-    });
-    await _registerCurrentUser();
+    _authSubscription = null;
+    _tokenSubscription = null;
+    _messageSubscription = null;
+    _initialized = false;
   }
 
   Future<void> _registerCurrentUser() async {
