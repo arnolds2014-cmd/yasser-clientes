@@ -7,6 +7,7 @@ import '../config/app_config.dart';
 import '../services/chat_service.dart';
 import '../services/auth_service.dart';
 import '../services/daily_notification_service.dart';
+import '../services/push_notification_service.dart';
 import '../widgets/open_status_banner.dart';
 import 'chat_screen.dart';
 import 'gallery_screen.dart';
@@ -28,8 +29,25 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     _profile = _loadProfile();
     WidgetsBinding.instance.addPostFrameCallback(
-      (_) => _scheduleNotification(),
+      (_) {
+        _scheduleNotification();
+        _initializePushNotifications();
+      },
     );
+  }
+
+  Future<void> _initializePushNotifications() async {
+    try {
+      await PushNotificationService.instance.initialize();
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('No se pudieron activar las notificaciones: $error'),
+          ),
+        );
+      }
+    }
   }
 
   Future<Map<String, dynamic>> _loadProfile() async {

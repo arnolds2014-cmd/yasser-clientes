@@ -61,7 +61,7 @@ El APK queda en `build\app\outputs\flutter-apk\app-debug.apk`. Si no se proporci
 El workflow [android-debug.yml](./.github/workflows/android-debug.yml) genera los archivos nativos Android, analiza el código, ejecuta pruebas y construye el APK debug. Para activarlo:
 
 1. Usa el repositorio nuevo [`arnolds2014-cmd/yasser-clientes`](https://github.com/arnolds2014-cmd/yasser-clientes), no el repositorio contable. El repositorio nuevo está público; el código no debe incluir contraseñas, `service_role` ni claves privadas. Si prefieres que el código no sea público, cambia su visibilidad a privado en GitHub Settings.
-2. En Settings → Secrets and variables → Actions, crea los secretos `SUPABASE_URL` y `SUPABASE_PUBLISHABLE_KEY`, y la variable `BARBER_ID` con el UUID del barbero. Usa la clave Publishable (antes llamada anon) del proyecto Supabase, nunca una Secret key.
+2. En Settings → Secrets and variables → Actions, crea los secretos `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` y `FIREBASE_CONFIG_JSON`, y la variable `BARBER_ID` con el UUID del barbero. Guarda el contenido completo del `google-services.json` en `FIREBASE_CONFIG_JSON`. Usa la clave Publishable (antes llamada anon) del proyecto Supabase, nunca una Secret key. No subas archivos de claves de servidor a GitHub.
 3. Desde esta carpeta, conecta el repositorio local ya inicializado y sube la rama `main`:
 
    ```powershell
@@ -71,11 +71,20 @@ El workflow [android-debug.yml](./.github/workflows/android-debug.yml) genera lo
 
 4. En GitHub → Actions, abre el workflow “Android debug APK”. Al completarse correctamente, descarga `clientes-de-barberia-debug-apk` desde los artifacts de la ejecución.
 
-En cada `push`, el workflow ejecuta análisis, pruebas y compila un APK. Con los valores de Supabase configurados, el artifact se llama `clientes-de-barberia-debug-apk` y queda conectado al backend. Si faltan, genera `clientes-de-barberia-debug-apk-sin-supabase`; ese APK sirve para probar la interfaz, pero mostrará que falta configuración y no podrá comunicarse con clientes. `pull_request` solo ejecuta análisis y pruebas para no exponer secretos a contribuciones externas.
+En cada `push`, el workflow ejecuta análisis, pruebas y compila un APK. Con Supabase y Firebase configurados, el artifact se llama `clientes-de-barberia-debug-apk` y queda conectado al backend. Si falta alguno, genera `clientes-de-barberia-debug-apk-sin-supabase`; ese APK no está listo para mensajería conectada. `pull_request` solo ejecuta análisis y pruebas para no exponer secretos a contribuciones externas.
 
 ## Alcance de mensajes y notificaciones
 
-El chat usa Supabase Realtime mientras el usuario está en línea y la app está abierta. El barbero puede seleccionar clientes, abrir un chat y guardar las especificaciones de sus cortes; cada cliente consulta solo su propio historial. Las notificaciones push de mensajes entrantes cuando la app está cerrada no están configuradas: requieren además registrar una aplicación Firebase/FCM y credenciales de servidor. El recordatorio de las 08:00 es una notificación **local** independiente. Android puede restringir alarmas exactas según permisos, ahorro de batería o fabricante; no es posible garantizar ejecución puntual en todos los teléfonos.
+El chat usa Supabase Realtime mientras el usuario está en línea y la app está abierta. El barbero puede seleccionar clientes, abrir un chat y guardar las especificaciones de sus cortes; cada cliente consulta solo su propio historial. FCM entrega avisos de mensajes entrantes con la app en segundo plano o cerrada. Para habilitarlo, además de configurar `FIREBASE_CONFIG_JSON` en GitHub:
+
+1. Ejecuta [`supabase/push_notifications.sql`](./supabase/push_notifications.sql) en Supabase → SQL Editor. Esta migración crea una tabla nueva de tokens con RLS y no modifica ni borra los mensajes.
+2. En Firebase Console, genera una clave de cuenta de servicio para el proyecto de mensajería y confirma que la API Firebase Cloud Messaging (HTTP v1) esté habilitada. Si la cuenta no tiene permiso para enviar FCM, asígnale el rol `Firebase Cloud Messaging API Admin` en Google Cloud IAM. La clave privada es confidencial: no la pongas en el APK, en GitHub ni en el repositorio.
+3. Despliega la Edge Function: `supabase functions deploy send-message-push --no-verify-jwt`.
+4. En Supabase → Edge Functions → Secrets, configura `FIREBASE_SERVICE_ACCOUNT` con el JSON completo de la cuenta de servicio y `YASSER_WEBHOOK_SECRET` con un secreto aleatorio largo. No compartas esos valores.
+5. En Supabase → Database → Webhooks, crea un webhook para `public.yasser_messages`, evento `INSERT`, que invoque la función `send-message-push`. Añade el encabezado `x-yasser-webhook-secret` con el mismo valor de `YASSER_WEBHOOK_SECRET`.
+6. Sube el cambio al repositorio para que GitHub Actions cree el nuevo APK; instala esa versión en ambos teléfonos y acepta el permiso de notificaciones.
+
+La función solo envía un aviso genérico, no incluye el contenido privado del mensaje. La tabla `yasser_push_tokens` guarda los tokens por UUID y cada usuario solo puede administrar el suyo. El recordatorio de las 08:00 es una notificación **local** independiente. Android puede restringir alarmas exactas según permisos, ahorro de batería o fabricante; no es posible garantizar ejecución puntual en todos los teléfonos.
 
 La alarma local se programa al entrar a la pantalla principal. El banner muestra ABIERTO desde 08:00 hasta antes de 20:00 según el reloj local. Las imágenes de galería son ejemplos y se deben reemplazar por fotografías autorizadas de la barbería.
 

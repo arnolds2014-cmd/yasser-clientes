@@ -78,6 +78,17 @@ tree.write(manifest_path, encoding="utf-8", xml_declaration=True)
 gradle_path = Path("android/app/build.gradle.kts")
 gradle = gradle_path.read_text(encoding="utf-8")
 
+google_services_plugin = 'id("com.google.gms.google-services")'
+if google_services_plugin not in gradle:
+    application_plugin = '    id("com.android.application")\n'
+    if application_plugin not in gradle:
+        raise RuntimeError(f"Could not find Android application plugin in {gradle_path}")
+    gradle = gradle.replace(
+        application_plugin,
+        application_plugin + f"    {google_services_plugin}\n",
+        1,
+    )
+
 if "isCoreLibraryDesugaringEnabled = true" not in gradle:
     compile_options = "    compileOptions {\n"
     if compile_options not in gradle:
@@ -103,3 +114,26 @@ if desugaring_dependency not in gradle:
         gradle += f"\ndependencies {{\n    {desugaring_dependency}\n}}\n"
 
 gradle_path.write_text(gradle, encoding="utf-8")
+
+settings_path = Path("android/settings.gradle.kts")
+settings = settings_path.read_text(encoding="utf-8")
+google_services_plugin_declaration = (
+    'id("com.google.gms.google-services") version "4.4.2" apply false'
+)
+if google_services_plugin_declaration not in settings:
+    android_plugin_line = next(
+        (
+            line
+            for line in settings.splitlines()
+            if line.strip().startswith('id("com.android.application")')
+        ),
+        None,
+    )
+    if android_plugin_line is None:
+        raise RuntimeError(f"Could not find Android application plugin in {settings_path}")
+    settings = settings.replace(
+        android_plugin_line,
+        f"{android_plugin_line}\n    {google_services_plugin_declaration}",
+        1,
+    )
+settings_path.write_text(settings, encoding="utf-8")

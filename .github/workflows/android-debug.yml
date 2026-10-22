@@ -31,6 +31,15 @@ jobs:
       - name: Generate Android project files
         run: flutter create --platforms=android --project-name yasser_barber --org com.yasser .
 
+      - name: Configure Firebase Android app
+        if: github.event_name != 'pull_request'
+        env:
+          FIREBASE_CONFIG_JSON: ${{ secrets.FIREBASE_CONFIG_JSON }}
+        run: |
+          if [ -n "$FIREBASE_CONFIG_JSON" ]; then
+            printf '%s' "$FIREBASE_CONFIG_JSON" > android/app/google-services.json
+          fi
+
       - name: Configure local notification receivers
         run: python3 tool/prepare_android.py
 
@@ -49,20 +58,27 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
+          FIREBASE_CONFIG_JSON: ${{ secrets.FIREBASE_CONFIG_JSON }}
           BARBER_ID: ${{ vars.BARBER_ID }}
         run: |
-          if [ -n "$SUPABASE_URL" ] && [ -n "$SUPABASE_PUBLISHABLE_KEY" ] && [ -n "$BARBER_ID" ]; then
+          if [ -n "$SUPABASE_URL" ] && [ -n "$SUPABASE_PUBLISHABLE_KEY" ] && [ -n "$BARBER_ID" ] && [ -n "$FIREBASE_CONFIG_JSON" ]; then
             echo "configured=true" >> "$GITHUB_OUTPUT"
           else
             echo "configured=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::Set SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, and BARBER_ID to build a connected APK."
+            echo "::warning::Set SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, BARBER_ID, and FIREBASE_CONFIG_JSON to build a connected APK."
           fi
+
+      - name: Validate Firebase Android configuration
+        if: github.event_name != 'pull_request' && steps.config.outputs.configured == 'true'
+        run: |
+          python3 -c "import json; d=json.load(open('android/app/google-services.json', encoding='utf-8')); assert d['client'][0]['client_info']['android_client_info']['package_name'] == 'com.yasser.yasser_barber', 'Firebase package name must be com.yasser.yasser_barber'"
 
       - name: Build debug APK
         if: github.event_name != 'pull_request' && steps.config.outputs.configured == 'true'
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
+          FIREBASE_CONFIG_JSON: ${{ secrets.FIREBASE_CONFIG_JSON }}
           BARBER_ID: ${{ vars.BARBER_ID }}
         run: >-
           flutter build apk --debug
