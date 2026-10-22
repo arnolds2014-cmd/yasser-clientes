@@ -1,6 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../config/app_config.dart';
+import '../services/chat_service.dart';
 import '../services/auth_service.dart';
 import '../services/daily_notification_service.dart';
 import '../widgets/open_status_banner.dart';
@@ -17,17 +21,47 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   late final Future<Map<String, dynamic>> _profile;
+  StreamSubscription<List<Map<String, dynamic>>>? _chatSubscription;
 
   @override
   void initState() {
     super.initState();
+    _profile = _loadProfile();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _scheduleNotification());
+  }
+
+  Future<Map<String, dynamic>> _loadProfile() async {
     final userId = Supabase.instance.client.auth.currentUser!.id;
-    _profile = Supabase.instance.client
+    final profile = await Supabase.instance.client
         .from('profiles')
         .select('id, username, role')
         .eq('id', userId)
         .single();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _scheduleNotification());
+    if (profile['role'] == 'client') _connectClientChat();
+    return profile;
+  }
+
+  void _connectClientChat() {
+    _chatSubscription = ChatService(
+      Supabase.instance.client,
+      partnerId: AppConfig.barberId,
+    ).watchConversation().listen(
+      (_) {},
+      onError: (Object error) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('No se pudo conectar al chat: $error')),
+          );
+        }
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    final subscription = _chatSubscription;
+    if (subscription != null) unawaited(subscription.cancel());
+    super.dispose();
   }
 
   Future<void> _scheduleNotification() async {
@@ -121,31 +155,47 @@ class _ClientHome extends StatelessWidget {
   }
 }
 
-class _BarberHome extends StatelessWidget {
+class _BarberHome extends StatefulWidget {
   const _BarberHome();
 
   @override
-  Widget build(BuildContext context) {
-    final clients = Supabase.instance.client
-        .from('profiles')
-        .select('id, username')
-        .eq('role', 'client')
-        .order('username');
+  State<_BarberHome> createState() => _BarberHomeState();
+}
 
-    return FutureBuilder<List<Map<String, dynamic>>>(
-      future: clients,
-      builder: (context, snapshot) {
-        if (snapshot.hasError) {
+class _BarberHomeState extends State<_BarberHome> {
+  late final Stream<List<Map<String, dynamic>>> _clients;
+
+  @override
+  void initState() {
+    super.initState();
+    _clients = Supabase.instance.client
+        .from('profiles')
+        .stream(primaryKey: ['id'])
+        .order('username')
+        .map((profiles) =>
+            profiles.where((profile) => profile['role'] == 'client').toList());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<List<Map<String, dynamic>>>(
+      stream: _clients,
+      builder: (context, clientsSnapshot) {
+        if (clientsSnapshot.hasError) {
           return Center(
-            child: Text('No se pudieron cargar los clientes: ${snapshot.error}'),
+            child: Text(
+              'No se pudieron cargar los clientes: ${clientsSnapshot.error}',
+            ),
           );
         }
-        if (!snapshot.hasData) {
+        if (!clientsSnapshot.hasData) {
           return const Center(child: CircularProgressIndicator());
         }
-        final rows = snapshot.data!;
+        final rows = clientsSnapshot.data!;
         if (rows.isEmpty) {
-          return const Center(child: Text('Todavía no hay clientes registrados.'));
+          return const Center(
+            child: Text('Todavía no hay clientes registrados.'),
+          );
         }
         return ListView.builder(
           itemCount: rows.length,
@@ -155,6 +205,18 @@ class _BarberHome extends StatelessWidget {
               leading: const CircleAvatar(child: Icon(Icons.person)),
               title: Text(client['username'] as String),
               subtitle: const Text('Abrir chat privado'),
+              trailing: IconButton(
+                tooltip: 'Ver historial de cortes',
+                icon: const Icon(Icons.history),
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute<void>(
+                    builder: (_) => HistoryScreen(
+                      clientId: client['id'] as String,
+                    ),
+                  ),
+                ),
+              ),
               onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute<void>(

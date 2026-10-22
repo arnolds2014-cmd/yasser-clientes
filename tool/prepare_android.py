@@ -27,6 +27,7 @@ for permission in sorted(permissions - existing_permissions):
 application = root.find("application")
 if application is None:
     raise RuntimeError("Android manifest does not define an application element")
+application.set(f"{{{ANDROID_NS}}}label", "Barbería YASSER")
 
 receivers = {
     "com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver": [],

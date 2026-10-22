@@ -43,19 +43,23 @@ jobs:
       - name: Run tests
         run: flutter test
 
-      - name: Require Supabase build configuration
+      - name: Check Supabase build configuration
         if: github.event_name != 'pull_request'
+        id: config
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           BARBER_ID: ${{ vars.BARBER_ID }}
         run: |
-          test -n "$SUPABASE_URL" || { echo "::error::Configure repository secret SUPABASE_URL."; exit 1; }
-          test -n "$SUPABASE_ANON_KEY" || { echo "::error::Configure repository secret SUPABASE_ANON_KEY."; exit 1; }
-          test -n "$BARBER_ID" || { echo "::error::Configure repository variable BARBER_ID."; exit 1; }
+          if [ -n "$SUPABASE_URL" ] && [ -n "$SUPABASE_ANON_KEY" ] && [ -n "$BARBER_ID" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Set SUPABASE_URL, SUPABASE_ANON_KEY, and BARBER_ID to build a connected APK."
+          fi
 
       - name: Build debug APK
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' && steps.config.outputs.configured == 'true'
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
@@ -67,7 +71,7 @@ jobs:
           --dart-define=BARBER_ID="$BARBER_ID"
 
       - name: Upload debug APK
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' && steps.config.outputs.configured == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: clientes-de-barberia-debug-apk

@@ -144,8 +144,11 @@ create policy "Barber can add haircut history"
   on public.haircut_history for insert to authenticated
   with check (
     exists (
-      select 1 from public.profiles
-      where id = (select auth.uid()) and role = 'barber'
+      select 1
+      from public.barber_settings
+      join public.profiles client on client.id = haircut_history.client_id
+      where barber_settings.barber_id = (select auth.uid())
+        and client.role = 'client'
     )
   );
 
@@ -154,4 +157,4 @@ grant select, insert on public.messages to authenticated;
 grant select, insert on public.haircut_history to authenticated;
 grant select on public.barber_settings to authenticated;
 
-alter publication supabase_realtime add table public.messages;
+alter publication supabase_realtime add table public.profiles, public.messages;

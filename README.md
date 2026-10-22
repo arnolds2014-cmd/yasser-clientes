@@ -1,4 +1,6 @@
-# Clientes de barbería YASSER
+# yasser-clientes
+
+## App de comunicación para la barbería YASSER
 
 App Android Flutter para conversar por UUID con los clientes de la barbería. Incluye registro por correo y contraseña, lista de clientes para el barbero, chat en tiempo real mientras la app está conectada, galería, historial de cortes, banner de horario y recordatorio local diario. No solicita teléfonos.
 
@@ -19,10 +21,11 @@ Supabase Auth acepta correo y contraseña; `username` es el nombre visible del p
    ```sql
    update public.profiles set role = 'barber' where id = 'UUID_DEL_BARBERO';
    insert into public.barber_settings (singleton, barber_id)
-   values (true, 'UUID_DEL_BARBERO');
+   values (true, 'UUID_DEL_BARBERO')
+   on conflict (singleton) do update set barber_id = excluded.barber_id;
    ```
 
-6. Realtime se añade a `public.messages` mediante el SQL. El barbero podrá ver la lista de perfiles de clientes y abrir sus conversaciones.
+6. Realtime se añade a `public.profiles` y `public.messages` mediante el SQL. La lista del barbero se actualiza al registrarse nuevos clientes.
 
 ## Ejecutar en Windows
 
@@ -49,22 +52,22 @@ El APK queda en `build\app\outputs\flutter-apk\app-debug.apk`. Si no se proporci
 
 El workflow [android-debug.yml](./.github/workflows/android-debug.yml) genera los archivos nativos Android, analiza el código, ejecuta pruebas y construye el APK debug. Para activarlo:
 
-1. Crea un repositorio nuevo y vacío en tu cuenta de GitHub (no uses el repositorio contable).
+1. Usa el repositorio nuevo [`arnolds2014-cmd/yasser-clientes`](https://github.com/arnolds2014-cmd/yasser-clientes), no el repositorio contable. El repositorio nuevo está público; el código no debe incluir contraseñas, `service_role` ni claves privadas. Si prefieres que el código no sea público, cambia su visibilidad a privado en GitHub Settings.
 2. En Settings → Secrets and variables → Actions, crea los secretos `SUPABASE_URL` y `SUPABASE_ANON_KEY`, y la variable `BARBER_ID` con el UUID del barbero.
-3. Desde esta carpeta, conecta el repositorio local ya inicializado y sube la rama `main` (cambia `TU_USUARIO` por tu cuenta):
+3. Desde esta carpeta, conecta el repositorio local ya inicializado y sube la rama `main`:
 
    ```powershell
-   git remote add origin https://github.com/TU_USUARIO/clientes-de-barberia.git
+   git remote add origin https://github.com/arnolds2014-cmd/yasser-clientes.git
    git push -u origin main
    ```
 
 4. En GitHub → Actions, abre el workflow “Android debug APK”. Al completarse correctamente, descarga `clientes-de-barberia-debug-apk` desde los artifacts de la ejecución.
 
-En las ejecuciones de `push` y `workflow_dispatch`, el workflow falla intencionalmente si faltan los valores de Supabase, para no entregar un APK que parezca operativo pero no pueda comunicarse. En `pull_request` ejecuta análisis y pruebas, pero omite el APK para que las contribuciones externas no requieran acceso a secretos.
+En cada `push`, el workflow ejecuta análisis y pruebas. Si los valores de Supabase están configurados, también compila el APK conectado; si faltan, omite el APK y deja un aviso para no producir un paquete que parezca operativo pero no pueda comunicarse. `pull_request` solo ejecuta análisis y pruebas para no exponer secretos a contribuciones externas.
 
 ## Alcance de mensajes y notificaciones
 
-El chat usa Supabase Realtime mientras el usuario está en línea y la app está abierta. Las notificaciones push de mensajes entrantes cuando la app está cerrada no están configuradas: requieren además registrar una aplicación Firebase/FCM y credenciales de servidor. El recordatorio de las 08:00 es una notificación **local** independiente. Android puede restringir alarmas exactas según permisos, ahorro de batería o fabricante; no es posible garantizar ejecución puntual en todos los teléfonos.
+El chat usa Supabase Realtime mientras el usuario está en línea y la app está abierta. El barbero puede seleccionar clientes, abrir un chat y guardar las especificaciones de sus cortes; cada cliente consulta solo su propio historial. Las notificaciones push de mensajes entrantes cuando la app está cerrada no están configuradas: requieren además registrar una aplicación Firebase/FCM y credenciales de servidor. El recordatorio de las 08:00 es una notificación **local** independiente. Android puede restringir alarmas exactas según permisos, ahorro de batería o fabricante; no es posible garantizar ejecución puntual en todos los teléfonos.
 
 La alarma local se programa al entrar a la pantalla principal. El banner muestra ABIERTO desde 08:00 hasta antes de 20:00 según el reloj local. Las imágenes de galería son ejemplos y se deben reemplazar por fotografías autorizadas de la barbería.
 
