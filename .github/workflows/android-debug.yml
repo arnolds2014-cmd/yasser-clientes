@@ -61,12 +61,24 @@ jobs:
           FIREBASE_CONFIG_JSON: ${{ secrets.FIREBASE_CONFIG_JSON }}
           BARBER_ID: ${{ vars.BARBER_ID }}
         run: |
-          if [ -n "$SUPABASE_URL" ] && [ -n "$SUPABASE_PUBLISHABLE_KEY" ] && [ -n "$BARBER_ID" ] && [ -n "$FIREBASE_CONFIG_JSON" ]; then
+          missing=""
+          for name in SUPABASE_URL SUPABASE_PUBLISHABLE_KEY BARBER_ID FIREBASE_CONFIG_JSON; do
+            if [ -z "${!name}" ]; then
+              missing="${missing} ${name}"
+            fi
+          done
+          if [ -z "$missing" ]; then
             echo "configured=true" >> "$GITHUB_OUTPUT"
           else
             echo "configured=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::Set SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, BARBER_ID, and FIREBASE_CONFIG_JSON to build a connected APK."
+            echo "::error::Missing GitHub Actions configuration:${missing}"
           fi
+
+      - name: Stop if connected build configuration is missing
+        if: github.event_name != 'pull_request' && steps.config.outputs.configured != 'true'
+        run: |
+          echo "Configure the missing repository secrets/variable listed above, then run this workflow again."
+          exit 1
 
       - name: Validate Firebase Android configuration
         if: github.event_name != 'pull_request' && steps.config.outputs.configured == 'true'
@@ -86,22 +98,10 @@ jobs:
           --dart-define=SUPABASE_PUBLISHABLE_KEY="$SUPABASE_PUBLISHABLE_KEY"
           --dart-define=BARBER_ID="$BARBER_ID"
 
-      - name: Build unconfigured debug APK
-        if: github.event_name != 'pull_request' && steps.config.outputs.configured != 'true'
-        run: flutter build apk --debug
-
       - name: Upload debug APK
         if: github.event_name != 'pull_request' && steps.config.outputs.configured == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: clientes-de-barberia-debug-apk
-          path: build/app/outputs/flutter-apk/app-debug.apk
-          if-no-files-found: error
-
-      - name: Upload unconfigured debug APK
-        if: github.event_name != 'pull_request' && steps.config.outputs.configured != 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: clientes-de-barberia-debug-apk-sin-supabase
           path: build/app/outputs/flutter-apk/app-debug.apk
           if-no-files-found: error
