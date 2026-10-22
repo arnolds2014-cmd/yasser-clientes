@@ -51,13 +51,9 @@ El workflow [android-debug.yml](./.github/workflows/android-debug.yml) genera lo
 
 1. Crea un repositorio nuevo y vacío en tu cuenta de GitHub (no uses el repositorio contable).
 2. En Settings → Secrets and variables → Actions, crea los secretos `SUPABASE_URL` y `SUPABASE_ANON_KEY`, y la variable `BARBER_ID` con el UUID del barbero.
-3. Desde esta carpeta, conecta y sube el proyecto (cambia `TU_USUARIO` por tu cuenta):
+3. Desde esta carpeta, conecta el repositorio local ya inicializado y sube la rama `main` (cambia `TU_USUARIO` por tu cuenta):
 
    ```powershell
-   git init
-   git add .
-   git commit -m "Crear app de comunicacion para clientes de barberia"
-   git branch -M main
    git remote add origin https://github.com/TU_USUARIO/clientes-de-barberia.git
    git push -u origin main
    ```
