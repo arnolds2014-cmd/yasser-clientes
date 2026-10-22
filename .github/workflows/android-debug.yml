@@ -1,0 +1,75 @@
+name: Android debug APK
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Generate Android project files
+        run: flutter create --platforms=android --project-name yasser_barber --org com.yasser .
+
+      - name: Configure local notification receivers
+        run: python3 tool/prepare_android.py
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze Dart code
+        run: flutter analyze
+
+      - name: Run tests
+        run: flutter test
+
+      - name: Require Supabase build configuration
+        if: github.event_name != 'pull_request'
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          BARBER_ID: ${{ vars.BARBER_ID }}
+        run: |
+          test -n "$SUPABASE_URL" || { echo "::error::Configure repository secret SUPABASE_URL."; exit 1; }
+          test -n "$SUPABASE_ANON_KEY" || { echo "::error::Configure repository secret SUPABASE_ANON_KEY."; exit 1; }
+          test -n "$BARBER_ID" || { echo "::error::Configure repository variable BARBER_ID."; exit 1; }
+
+      - name: Build debug APK
+        if: github.event_name != 'pull_request'
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          BARBER_ID: ${{ vars.BARBER_ID }}
+        run: >-
+          flutter build apk --debug
+          --dart-define=SUPABASE_URL="$SUPABASE_URL"
+          --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY"
+          --dart-define=BARBER_ID="$BARBER_ID"
+
+      - name: Upload debug APK
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: clientes-de-barberia-debug-apk
+          path: build/app/outputs/flutter-apk/app-debug.apk
+          if-no-files-found: error
