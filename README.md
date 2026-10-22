@@ -29,6 +29,8 @@ Supabase Auth acepta correo y contraseña; `username` es el nombre visible del p
 
 Si el registro/login funciona pero no aparecen clientes o no se pueden enviar mensajes, ejecuta [`supabase/diagnostics.sql`](./supabase/diagnostics.sql) en SQL Editor y verifica que `barber_profiles`, `barber_setting_rows` y `valid_barber_settings` sean `1`, y que `messages_realtime_enabled` y `profiles_realtime_enabled` sean `true`. `client_profiles` debe ser mayor que cero cuando ya se hayan registrado clientes. La consulta no devuelve correos, claves ni UUIDs.
 
+Si enviar un mensaje muestra `infinite recursion detected in policy for relation "messages"` (`42P17`), ejecuta una vez [`supabase/fix_message_policy_recursion.sql`](./supabase/fix_message_policy_recursion.sql) en SQL Editor. Esta migración reemplaza solo funciones y políticas; no borra perfiles ni mensajes. Después, vuelve a iniciar sesión en ambos dispositivos y prueba el chat.
+
 ## Ejecutar en Windows
 
 Instala Flutter estable, Android Studio (Android SDK) y un JDK 17. Abre PowerShell en esta carpeta:
