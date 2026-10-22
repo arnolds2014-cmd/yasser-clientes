@@ -4,32 +4,36 @@
 
 App Android Flutter para conversar por UUID con los clientes de la barbería. Incluye registro por correo y contraseña, lista de clientes para el barbero, chat en tiempo real mientras la app está conectada, galería, historial de cortes, banner de horario y recordatorio local diario. No solicita teléfonos.
 
+## Reinicio seguro del chat
+
+La revisión inicial encontró un ciclo entre las políticas RLS de `profiles` y `messages`. Para rehacer la capa de chat sin borrar ni modificar esas tablas/datos anteriores, la nueva versión usa tablas aisladas con prefijo `yasser_`: `yasser_profiles`, `yasser_messages`, `yasser_haircut_history` y `yasser_barber_settings`. Sus políticas no se consultan recursivamente entre sí. Los usuarios actuales se copian a `yasser_profiles` con sus mismos UUID mediante el backfill del esquema.
+
+No ejecutes ni vuelvas a ejecutar las antiguas políticas o `fix_message_policy_recursion.sql`. El esquema actual [`supabase/schema.sql`](./supabase/schema.sql) es la nueva instalación aditiva: crea las tablas `yasser_*` y no elimina tablas ni mensajes existentes.
+
 ## Importante: servicio externo que debes crear
 
 La app necesita un proyecto Supabase para guardar cuentas y mensajes. No se puede habilitar la comunicación real hasta configurar un proyecto propio y sus valores. No compartas la clave `service_role`: nunca va en la app. La clave `anon`/publishable está diseñada para la aplicación cliente; la seguridad depende de las políticas RLS.
 
 Supabase Auth acepta correo y contraseña; `username` es el nombre visible del perfil, no una credencial para iniciar sesión.
 
-## Preparar Supabase
+## Preparar o reiniciar Supabase sin borrar datos
 
-1. Crea un proyecto en Supabase y guarda su URL y su anon/publishable key.
-2. Ejecuta una sola vez [`supabase/schema.sql`](./supabase/schema.sql) en el SQL Editor.
-3. Registra la cuenta del barbero con correo y contraseña desde la app. Confirma el correo si Supabase lo solicita.
-4. En Supabase → Authentication → Users, copia el UUID del barbero.
-5. En el SQL Editor, reemplaza el UUID en esta consulta y ejecútala:
+1. Usa el proyecto Supabase que ya tienes y conserva su URL y clave Publishable.
+2. Ejecuta el esquema actualizado [`supabase/schema.sql`](./supabase/schema.sql) en Supabase → SQL Editor. Es aditivo y no borra las tablas o mensajes de la versión anterior.
+3. La consulta de backfill crea perfiles `yasser_profiles` para cuentas de Auth existentes, conservando su UUID. Regístrate otra vez en los dos APK solo si las cuentas no aparecen en la tabla nueva.
+4. En Supabase → Authentication → Users, copia el UUID de la cuenta del barbero.
+5. En SQL Editor, reemplaza el UUID en esta consulta y ejecútala (el mismo UUID debe configurar la variable `BARBER_ID` usada al compilar):
 
    ```sql
-   update public.profiles set role = 'barber' where id = 'UUID_DEL_BARBERO';
-   insert into public.barber_settings (singleton, barber_id)
+   insert into public.yasser_barber_settings (singleton, barber_id)
    values (true, 'UUID_DEL_BARBERO')
    on conflict (singleton) do update set barber_id = excluded.barber_id;
    ```
 
-6. Realtime se añade a `public.profiles` y `public.messages` mediante el SQL. La lista del barbero se actualiza al registrarse nuevos clientes.
+6. Realtime se añade a `yasser_profiles` y `yasser_messages`. La identidad de barbero en la app se determina comparando `auth.uid()` con `BARBER_ID`, no por un campo `role` editable.
+7. Desinstala de los dos teléfonos el APK de prueba anterior, descarga el APK del último workflow y vuelve a instalarlo. APK debug de compilaciones distintas puede llevar certificados de firma distintos, y Android no permite actualizar sobre una firma diferente.
 
-Si el registro/login funciona pero no aparecen clientes o no se pueden enviar mensajes, ejecuta [`supabase/diagnostics.sql`](./supabase/diagnostics.sql) en SQL Editor y verifica que `barber_profiles`, `barber_setting_rows` y `valid_barber_settings` sean `1`, y que `messages_realtime_enabled` y `profiles_realtime_enabled` sean `true`. `client_profiles` debe ser mayor que cero cuando ya se hayan registrado clientes. La consulta no devuelve correos, claves ni UUIDs.
-
-Si enviar un mensaje muestra `infinite recursion detected in policy for relation "messages"` (`42P17`), ejecuta una vez [`supabase/fix_message_policy_recursion.sql`](./supabase/fix_message_policy_recursion.sql) en SQL Editor. Esta migración reemplaza solo funciones y políticas; no borra perfiles ni mensajes. Después, vuelve a iniciar sesión en ambos dispositivos y prueba el chat.
+Para verificar el estado de la capa nueva, sustituye `UUID_DEL_BARBERO` en [`supabase/diagnostics.sql`](./supabase/diagnostics.sql) y ejecútalo. Debe mostrar `matching_barber_setting = 1`; los dos indicadores Realtime deben ser `true`.
 
 ## Ejecutar en Windows
 

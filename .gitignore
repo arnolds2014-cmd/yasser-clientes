@@ -4,6 +4,9 @@
 .packages
 .pub-cache/
 .pub/
+.idea/
+.metadata
+*.iml
 build/
 coverage/
 android/.gradle/

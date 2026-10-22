@@ -27,10 +27,7 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void initState() {
     super.initState();
-    _chat = ChatService(
-      Supabase.instance.client,
-      partnerId: widget.partnerId,
-    );
+    _chat = ChatService(Supabase.instance.client, partnerId: widget.partnerId);
     _messages = _chat.watchConversation();
   }
 
@@ -64,14 +61,17 @@ class _ChatScreenState extends State<ChatScreen> {
               stream: _messages,
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
-                  return Center(child: Text('Error al cargar mensajes: ${snapshot.error}'));
+                  return Center(
+                    child: Text('Error al cargar mensajes: ${snapshot.error}'),
+                  );
                 }
                 final messages = snapshot.data ?? [];
                 return ListView.builder(
                   itemCount: messages.length,
                   itemBuilder: (context, index) {
                     final message = messages[index];
-                    final isMine = message['sender_id'] ==
+                    final isMine =
+                        message['sender_id'] ==
                         Supabase.instance.client.auth.currentUser?.id;
                     return Align(
                       alignment: isMine
@@ -80,7 +80,9 @@ class _ChatScreenState extends State<ChatScreen> {
                       child: Card(
                         color: isMine
                             ? Theme.of(context).colorScheme.primaryContainer
-                            : Theme.of(context).colorScheme.surfaceContainerHigh,
+                            : Theme.of(context)
+                                  .colorScheme
+                                  .surfaceContainerHigh,
                         child: Padding(
                           padding: const EdgeInsets.all(12),
                           child: Column(

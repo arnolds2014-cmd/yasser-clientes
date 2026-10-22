@@ -8,17 +8,30 @@ class GalleryScreen extends StatelessWidget {
   const GalleryScreen({super.key});
 
   static const _cuts = [
-    (id: 'fade-01', name: 'Fade clásico', image: 'https://images.unsplash.com/photo-1621605815971-fbc98d665033?w=900'),
-    (id: 'crop-02', name: 'Crop texturizado', image: 'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=900'),
+    (
+      id: 'fade-01',
+      name: 'Fade clásico',
+      image:
+          'https://images.unsplash.com/photo-1621605815971-fbc98d665033?w=900',
+    ),
+    (
+      id: 'crop-02',
+      name: 'Crop texturizado',
+      image:
+          'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=900',
+    ),
   ];
 
-  Future<void> _requestCut(BuildContext context, String id, String image) async {
+  Future<void> _requestCut(
+    BuildContext context,
+    String id,
+    String image,
+  ) async {
     try {
       await ChatService(
         Supabase.instance.client,
         partnerId: AppConfig.barberId,
-      )
-          .send('Quiero este corte ($id): $image', kind: 'cut_reference');
+      ).send('Quiero este corte ($id): $image', kind: 'cut_reference');
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Referencia enviada al chat privado')),
@@ -51,7 +64,10 @@ class GalleryScreen extends StatelessWidget {
                     height: 220,
                     fit: BoxFit.cover,
                     errorBuilder: (context, error, stackTrace) =>
-                        const SizedBox(height: 220, child: Icon(Icons.content_cut)),
+                        const SizedBox(
+                          height: 220,
+                          child: Icon(Icons.content_cut),
+                        ),
                   ),
                   ListTile(
                     title: Text(cut.name),

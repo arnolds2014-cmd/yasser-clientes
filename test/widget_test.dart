@@ -5,9 +5,6 @@ void main() {
   testWidgets('explains the required backend configuration', (tester) async {
     await tester.pumpWidget(const ConfigurationRequiredApp());
 
-    expect(
-      find.textContaining('SUPABASE_PUBLISHABLE_KEY'),
-      findsOneWidget,
-    );
+    expect(find.textContaining('SUPABASE_PUBLISHABLE_KEY'), findsOneWidget);
   });
 }

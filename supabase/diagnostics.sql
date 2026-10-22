@@ -1,28 +1,23 @@
 select
-  (select count(*) from public.profiles where role = 'barber')
-    as barber_profiles,
-  (select count(*) from public.profiles where role = 'client')
-    as client_profiles,
-  (select count(*) from public.barber_settings where singleton = true)
-    as barber_setting_rows,
+  (select count(*) from public.yasser_profiles) as app_profiles,
+  (select count(*) from public.yasser_messages) as app_messages,
+  (select count(*) from public.yasser_barber_settings) as barber_setting_rows,
   (
     select count(*)
-    from public.barber_settings settings
-    join public.profiles barber on barber.id = settings.barber_id
-    where settings.singleton = true and barber.role = 'barber'
-  ) as valid_barber_settings,
+    from public.yasser_barber_settings settings
+    join public.yasser_profiles barber on barber.id = settings.barber_id
+    where settings.singleton is true
+      and settings.barber_id = 'UUID_DEL_BARBERO'::uuid
+  ) as matching_barber_setting,
   exists (
-    select 1
-    from pg_publication_tables
+    select 1 from pg_publication_tables
     where pubname = 'supabase_realtime'
       and schemaname = 'public'
-      and tablename = 'messages'
+      and tablename = 'yasser_messages'
   ) as messages_realtime_enabled,
   exists (
-    select 1
-    from pg_publication_tables
+    select 1 from pg_publication_tables
     where pubname = 'supabase_realtime'
       and schemaname = 'public'
-      and tablename = 'profiles'
-  ) as profiles_realtime_enabled,
-  (select count(*) from public.messages) as saved_messages;
+      and tablename = 'yasser_profiles'
+  ) as profiles_realtime_enabled;

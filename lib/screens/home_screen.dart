@@ -27,34 +27,37 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _profile = _loadProfile();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _scheduleNotification());
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _scheduleNotification(),
+    );
   }
 
   Future<Map<String, dynamic>> _loadProfile() async {
     final userId = Supabase.instance.client.auth.currentUser!.id;
     final profile = await Supabase.instance.client
-        .from('profiles')
-        .select('id, username, role')
+        .from('yasser_profiles')
+        .select('id, username')
         .eq('id', userId)
         .single();
-    if (profile['role'] == 'client') _connectClientChat();
+    if (userId != AppConfig.barberId) _connectClientChat();
     return profile;
   }
 
   void _connectClientChat() {
-    _chatSubscription = ChatService(
-      Supabase.instance.client,
-      partnerId: AppConfig.barberId,
-    ).watchConversation().listen(
-      (_) {},
-      onError: (Object error) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('No se pudo conectar al chat: $error')),
-          );
-        }
-      },
-    );
+    _chatSubscription =
+        ChatService(
+          Supabase.instance.client,
+          partnerId: AppConfig.barberId,
+        ).watchConversation().listen(
+          (_) {},
+          onError: (Object error) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('No se pudo conectar al chat: $error')),
+              );
+            }
+          },
+        );
   }
 
   @override
@@ -66,12 +69,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _scheduleNotification() async {
     try {
-      final scheduled =
-          await DailyNotificationService.instance.scheduleDailyAtEight();
+      final scheduled = await DailyNotificationService.instance
+          .scheduleDailyAtEight();
       if (!scheduled && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Activa los permisos de notificaciones y alarmas exactas.'),
+            content: Text(
+              'Activa los permisos de notificaciones y alarmas exactas.',
+            ),
           ),
         );
       }
@@ -109,7 +114,8 @@ class _HomeScreenState extends State<HomeScreen> {
           if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
           }
-          return snapshot.data!['role'] == 'barber'
+          return Supabase.instance.client.auth.currentUser?.id ==
+                  AppConfig.barberId
               ? const _BarberHome()
               : const _ClientHome();
         },
@@ -169,11 +175,14 @@ class _BarberHomeState extends State<_BarberHome> {
   void initState() {
     super.initState();
     _clients = Supabase.instance.client
-        .from('profiles')
+        .from('yasser_profiles')
         .stream(primaryKey: ['id'])
         .order('username')
-        .map((profiles) =>
-            profiles.where((profile) => profile['role'] == 'client').toList());
+        .map(
+          (profiles) => profiles
+              .where((profile) => profile['id'] != AppConfig.barberId)
+              .toList(),
+        );
   }
 
   @override
@@ -211,9 +220,8 @@ class _BarberHomeState extends State<_BarberHome> {
                 onPressed: () => Navigator.push(
                   context,
                   MaterialPageRoute<void>(
-                    builder: (_) => HistoryScreen(
-                      clientId: client['id'] as String,
-                    ),
+                    builder: (_) =>
+                        HistoryScreen(clientId: client['id'] as String),
                   ),
                 ),
               ),

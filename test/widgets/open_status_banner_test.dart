@@ -8,9 +8,7 @@ void main() {
       DateTime(2026, 1, 1, 7, 59),
       DateTime(2026, 1, 1, 20, 0),
     ]) {
-      await tester.pumpWidget(
-        MaterialApp(home: OpenStatusBanner(now: time)),
-      );
+      await tester.pumpWidget(MaterialApp(home: OpenStatusBanner(now: time)));
       expect(find.text('🔴 CERRADO'), findsOneWidget);
     }
   });
@@ -20,9 +18,7 @@ void main() {
       DateTime(2026, 1, 1, 8, 0),
       DateTime(2026, 1, 1, 19, 59),
     ]) {
-      await tester.pumpWidget(
-        MaterialApp(home: OpenStatusBanner(now: time)),
-      );
+      await tester.pumpWidget(MaterialApp(home: OpenStatusBanner(now: time)));
       expect(find.text('🟢 ABIERTO'), findsOneWidget);
     }
   });

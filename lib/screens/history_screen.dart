@@ -23,7 +23,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   Future<List<Map<String, dynamic>>> _loadEntries() {
     return Supabase.instance.client
-        .from('haircut_history')
+        .from('yasser_haircut_history')
         .select('id, specifications, created_at')
         .eq('client_id', _clientId)
         .order('created_at', ascending: false);
@@ -50,7 +50,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
       _error = null;
     });
     try {
-      await Supabase.instance.client.from('haircut_history').insert({
+      await Supabase.instance.client.from('yasser_haircut_history').insert({
         'client_id': _clientId,
         'specifications': specifications,
       });

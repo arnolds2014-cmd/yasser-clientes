@@ -45,8 +45,7 @@ class _AuthScreenState extends State<AuthScreen> {
         );
         if (response.session == null && mounted) {
           setState(() {
-            _notice =
-                'Cuenta creada. Revisa tu correo para confirmar la dirección antes de iniciar sesión.';
+            _notice = 'Cuenta creada. Revisa tu correo para confirmar la dirección antes de iniciar sesión.';
           });
         }
       } else {
@@ -79,10 +78,9 @@ class _AuthScreenState extends State<AuthScreen> {
                   TextFormField(
                     controller: _username,
                     decoration: const InputDecoration(labelText: 'Usuario'),
-                    validator: (value) =>
-                        value == null || value.trim().isEmpty
-                            ? 'Escribe un usuario'
-                            : null,
+                    validator: (value) => value == null || value.trim().isEmpty
+                        ? 'Escribe un usuario'
+                        : null,
                   ),
                 TextFormField(
                   controller: _email,
@@ -102,7 +100,12 @@ class _AuthScreenState extends State<AuthScreen> {
                 ),
                 if (_error != null) ...[
                   const SizedBox(height: 12),
-                  Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                  Text(
+                    _error!,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
                 ],
                 if (_notice != null) ...[
                   const SizedBox(height: 12),
@@ -111,23 +114,27 @@ class _AuthScreenState extends State<AuthScreen> {
                 const SizedBox(height: 20),
                 FilledButton(
                   onPressed: _busy ? null : _submit,
-                  child: Text(_busy
-                      ? 'Procesando…'
-                      : _registering
-                          ? 'Crear cuenta'
-                          : 'Iniciar sesión'),
+                  child: Text(
+                    _busy
+                        ? 'Procesando…'
+                        : _registering
+                        ? 'Crear cuenta'
+                        : 'Iniciar sesión',
+                  ),
                 ),
                 TextButton(
                   onPressed: _busy
                       ? null
                       : () => setState(() {
-                            _registering = !_registering;
-                            _error = null;
-                            _notice = null;
-                          }),
-                  child: Text(_registering
-                      ? 'Ya tengo cuenta'
-                      : 'Crear cuenta de cliente'),
+                          _registering = !_registering;
+                          _error = null;
+                          _notice = null;
+                        }),
+                  child: Text(
+                    _registering
+                        ? 'Ya tengo cuenta'
+                        : 'Crear cuenta de cliente',
+                  ),
                 ),
               ],
             ),

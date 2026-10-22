@@ -13,21 +13,25 @@ permissions = {
     "android.permission.RECEIVE_BOOT_COMPLETED",
     "android.permission.SCHEDULE_EXACT_ALARM",
 }
-existing_permissions = {
-    element.get(f"{{{ANDROID_NS}}}name")
-    for element in root.findall("uses-permission")
-}
-for permission in sorted(permissions - existing_permissions):
-    ET.SubElement(
-        root,
-        "uses-permission",
-        {f"{{{ANDROID_NS}}}name": permission},
-    )
+permission_elements = {}
+for element in root.findall("uses-permission"):
+    permission_elements[element.get(f"{{{ANDROID_NS}}}name")] = element
+    root.remove(element)
 
 application = root.find("application")
 if application is None:
     raise RuntimeError("Android manifest does not define an application element")
 application.set(f"{{{ANDROID_NS}}}label", "Barbería YASSER")
+
+for permission in permissions:
+    if permission not in permission_elements:
+        permission_elements[permission] = ET.Element(
+            "uses-permission",
+            {f"{{{ANDROID_NS}}}name": permission},
+        )
+
+for application_index, permission in enumerate(sorted(permission_elements)):
+    root.insert(application_index, permission_elements[permission])
 
 receivers = {
     "com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver": [],
@@ -52,15 +56,23 @@ for receiver_name, actions in receivers.items():
                 f"{{{ANDROID_NS}}}exported": "false",
             },
         )
-    if actions and receiver.find("intent-filter") is None:
-        intent_filter = ET.SubElement(receiver, "intent-filter")
+    if actions:
+        intent_filter = receiver.find("intent-filter")
+        if intent_filter is None:
+            intent_filter = ET.SubElement(receiver, "intent-filter")
+        existing_actions = {
+            action.get(f"{{{ANDROID_NS}}}name")
+            for action in intent_filter.findall("action")
+        }
         for action in actions:
-            ET.SubElement(
-                intent_filter,
-                "action",
-                {f"{{{ANDROID_NS}}}name": action},
-            )
+            if action not in existing_actions:
+                ET.SubElement(
+                    intent_filter,
+                    "action",
+                    {f"{{{ANDROID_NS}}}name": action},
+                )
 
+ET.indent(tree, space="    ")
 tree.write(manifest_path, encoding="utf-8", xml_declaration=True)
 
 gradle_path = Path("android/app/build.gradle.kts")

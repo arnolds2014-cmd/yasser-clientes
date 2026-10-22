@@ -25,14 +25,18 @@ class DailyNotificationService {
   }
 
   Future<bool> scheduleDailyAtEight() async {
-    final android = _plugin.resolvePlatformSpecificImplementation<
-        AndroidFlutterLocalNotificationsPlugin>();
-    final notificationsGranted =
-        await android?.requestNotificationsPermission();
+    final android = _plugin
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
+    final notificationsGranted = await android
+        ?.requestNotificationsPermission();
     final exactAlarmsGranted = await android?.requestExactAlarmsPermission();
 
-    final ios = _plugin.resolvePlatformSpecificImplementation<
-        IOSFlutterLocalNotificationsPlugin>();
+    final ios = _plugin
+        .resolvePlatformSpecificImplementation<
+          IOSFlutterLocalNotificationsPlugin
+        >();
     final iosGranted = await ios?.requestPermissions(
       alert: true,
       badge: true,
@@ -46,21 +50,9 @@ class DailyNotificationService {
     }
 
     final now = tz.TZDateTime.now(tz.local);
-    var firstAlarm = tz.TZDateTime(
-      tz.local,
-      now.year,
-      now.month,
-      now.day,
-      8,
-    );
+    var firstAlarm = tz.TZDateTime(tz.local, now.year, now.month, now.day, 8);
     if (!firstAlarm.isAfter(now)) {
-      firstAlarm = tz.TZDateTime(
-        tz.local,
-        now.year,
-        now.month,
-        now.day + 1,
-        8,
-      );
+      firstAlarm = tz.TZDateTime(tz.local, now.year, now.month, now.day + 1, 8);
     }
 
     await _plugin.zonedSchedule(

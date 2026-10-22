@@ -32,7 +32,8 @@ class YasserApp extends StatelessWidget {
       home: StreamBuilder<AuthState>(
         stream: Supabase.instance.client.auth.onAuthStateChange,
         builder: (context, snapshot) {
-          final session = snapshot.data?.session ??
+          final session =
+              snapshot.data?.session ??
               Supabase.instance.client.auth.currentSession;
           return session == null ? const AuthScreen() : const HomeScreen();
         },

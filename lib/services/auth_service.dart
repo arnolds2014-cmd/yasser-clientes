@@ -5,10 +5,7 @@ class AuthService {
 
   final SupabaseClient _client;
 
-  Future<void> signIn({
-    required String email,
-    required String password,
-  }) async {
+  Future<void> signIn({required String email, required String password}) async {
     await _client.auth.signInWithPassword(
       email: email.trim(),
       password: password,
@@ -23,7 +20,12 @@ class AuthService {
     return _client.auth.signUp(
       email: email.trim(),
       password: password,
-      data: {'username': username.trim()},
+      data: {
+        'display_name': username.trim(),
+        // Keep the previous schema's unique username trigger from colliding.
+        'username':
+            '${username.trim()}_${DateTime.now().microsecondsSinceEpoch}',
+      },
     );
   }
 
