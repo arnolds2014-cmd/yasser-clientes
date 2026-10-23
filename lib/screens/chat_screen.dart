@@ -21,9 +21,11 @@ class ChatScreen extends StatefulWidget {
 
 class _ChatScreenState extends State<ChatScreen> {
   final _input = TextEditingController();
+  final _messagesController = ScrollController();
   late final ChatService _chat;
   late final Stream<List<Map<String, dynamic>>> _messages;
   String? _error;
+  String? _latestMessageId;
   bool _sending = false;
 
   @override
@@ -36,7 +38,25 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void dispose() {
     _input.dispose();
+    _messagesController.dispose();
     super.dispose();
+  }
+
+  void _keepLatestMessageVisible(List<Map<String, dynamic>> messages) {
+    final latestMessageId = messages.isEmpty
+        ? null
+        : messages.first['id']?.toString();
+    if (latestMessageId == _latestMessageId) return;
+    _latestMessageId = latestMessageId;
+    if (latestMessageId == null) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_messagesController.hasClients) return;
+      _messagesController.animateTo(
+        0,
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOut,
+      );
+    });
   }
 
   Future<void> _send() async {
@@ -80,12 +100,14 @@ class _ChatScreenState extends State<ChatScreen> {
                     );
                   }
                   final messages = snapshot.data ?? [];
+                  _keepLatestMessageVisible(messages);
                   return ListView.builder(
+                    controller: _messagesController,
                     reverse: true,
                     padding: const EdgeInsets.all(12),
                     itemCount: messages.length,
                     itemBuilder: (context, index) {
-                      final message = messages[messages.length - index - 1];
+                      final message = messages[index];
                       final isMine =
                           message['sender_id'] ==
                           Supabase.instance.client.auth.currentUser?.id;

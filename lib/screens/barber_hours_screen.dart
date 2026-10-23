@@ -74,7 +74,17 @@ class _BarberHoursScreenState extends State<BarberHoursScreen> {
         builder: (context, snapshot) {
           if (snapshot.hasError) {
             return Center(
-              child: Text('No se pudo cargar el horario: ${snapshot.error}'),
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Text(
+                  'No se pudo cargar el horario. Ejecuta '
+                  'supabase/management_features.sql en Supabase; agrega las '
+                  'columnas necesarias sin borrar el horario ni el registro '
+                  'actual.\n\nDetalle: ${snapshot.error}',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 17),
+                ),
+              ),
             );
           }
           final saved = snapshot.data;

@@ -17,7 +17,7 @@ class ChatService {
     return _client
         .from('yasser_messages')
         .stream(primaryKey: ['id'])
-        .order('created_at')
+        .order('created_at', ascending: false)
         .map(
           (rows) => rows
               .where(

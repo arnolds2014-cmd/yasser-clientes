@@ -17,6 +17,14 @@ create policy "YASSER barber can update barber settings"
 
 grant update on public.yasser_barber_settings to authenticated;
 
+drop policy if exists "YASSER authenticated users can read barber settings"
+  on public.yasser_barber_settings;
+create policy "YASSER authenticated users can read barber settings"
+  on public.yasser_barber_settings for select to authenticated
+  using (true);
+
+grant select on public.yasser_barber_settings to authenticated;
+
 drop policy if exists "YASSER users can update their own profile"
   on public.yasser_profiles;
 create policy "YASSER users can update their own profile"
