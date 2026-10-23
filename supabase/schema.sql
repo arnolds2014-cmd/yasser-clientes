@@ -29,7 +29,9 @@ create table if not exists public.yasser_haircut_history (
 
 create table if not exists public.yasser_barber_settings (
   singleton boolean primary key default true check (singleton),
-  barber_id uuid not null references public.yasser_profiles(id)
+  barber_id uuid not null references public.yasser_profiles(id),
+  opening_time time not null default time '08:00',
+  closing_time time not null default time '20:00'
 );
 
 create or replace function public.create_yasser_profile_for_new_user()

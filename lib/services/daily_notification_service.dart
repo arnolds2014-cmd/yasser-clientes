@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/data/latest.dart' as tz_data;
@@ -24,7 +25,7 @@ class DailyNotificationService {
     );
   }
 
-  Future<bool> scheduleDailyAtEight() async {
+  Future<bool> scheduleDailyAt(TimeOfDay openingTime) async {
     final android = _plugin
         .resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin
@@ -50,9 +51,23 @@ class DailyNotificationService {
     }
 
     final now = tz.TZDateTime.now(tz.local);
-    var firstAlarm = tz.TZDateTime(tz.local, now.year, now.month, now.day, 8);
+    var firstAlarm = tz.TZDateTime(
+      tz.local,
+      now.year,
+      now.month,
+      now.day,
+      openingTime.hour,
+      openingTime.minute,
+    );
     if (!firstAlarm.isAfter(now)) {
-      firstAlarm = tz.TZDateTime(tz.local, now.year, now.month, now.day + 1, 8);
+      firstAlarm = tz.TZDateTime(
+        tz.local,
+        now.year,
+        now.month,
+        now.day + 1,
+        openingTime.hour,
+        openingTime.minute,
+      );
     }
 
     await _plugin.zonedSchedule(

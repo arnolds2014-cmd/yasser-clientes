@@ -30,7 +30,20 @@ class YasserApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'YASSER',
-      theme: ThemeData(colorSchemeSeed: Colors.brown, useMaterial3: true),
+      theme: ThemeData(
+        colorSchemeSeed: Colors.brown,
+        useMaterial3: true,
+        textTheme: const TextTheme(
+          bodyLarge: TextStyle(fontSize: 19),
+          bodyMedium: TextStyle(fontSize: 18),
+          titleMedium: TextStyle(fontSize: 20),
+          labelLarge: TextStyle(fontSize: 18),
+        ),
+        inputDecorationTheme: const InputDecorationTheme(
+          labelStyle: TextStyle(fontSize: 18),
+          hintStyle: TextStyle(fontSize: 18),
+        ),
+      ),
       home: StreamBuilder<AuthState>(
         stream: Supabase.instance.client.auth.onAuthStateChange,
         builder: (context, snapshot) {

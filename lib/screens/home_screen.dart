@@ -4,14 +4,18 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../config/app_config.dart';
-import '../services/chat_service.dart';
 import '../services/auth_service.dart';
+import '../services/barber_settings_service.dart';
+import '../services/chat_service.dart';
 import '../services/daily_notification_service.dart';
 import '../services/push_notification_service.dart';
+import '../widgets/image_background.dart';
 import '../widgets/open_status_banner.dart';
+import 'barber_hours_screen.dart';
 import 'chat_screen.dart';
 import 'gallery_screen.dart';
 import 'history_screen.dart';
+import 'profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -23,6 +27,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   late final Future<Map<String, dynamic>> _profile;
   StreamSubscription<List<Map<String, dynamic>>>? _chatSubscription;
+  StreamSubscription<BarberHours>? _hoursSubscription;
 
   @override
   void initState() {
@@ -30,7 +35,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _profile = _loadProfile();
     WidgetsBinding.instance.addPostFrameCallback(
       (_) {
-        _scheduleNotification();
+        _watchOpeningHours();
         _initializePushNotifications();
       },
     );
@@ -61,6 +66,21 @@ class _HomeScreenState extends State<HomeScreen> {
     return profile;
   }
 
+  void _watchOpeningHours() {
+    _hoursSubscription = BarberSettingsService(
+      Supabase.instance.client,
+    ).watchHours().listen(
+      (hours) => _scheduleOpeningNotification(hours.opensAt),
+      onError: (Object error) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('No se pudo cargar el horario: $error')),
+          );
+        }
+      },
+    );
+  }
+
   void _connectClientChat() {
     _chatSubscription =
         ChatService(
@@ -82,13 +102,15 @@ class _HomeScreenState extends State<HomeScreen> {
   void dispose() {
     final subscription = _chatSubscription;
     if (subscription != null) unawaited(subscription.cancel());
+    final hoursSubscription = _hoursSubscription;
+    if (hoursSubscription != null) unawaited(hoursSubscription.cancel());
     super.dispose();
   }
 
-  Future<void> _scheduleNotification() async {
+  Future<void> _scheduleOpeningNotification(TimeOfDay openingTime) async {
     try {
       final scheduled = await DailyNotificationService.instance
-          .scheduleDailyAtEight();
+          .scheduleDailyAt(openingTime);
       if (!scheduled && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -115,28 +137,41 @@ class _HomeScreenState extends State<HomeScreen> {
         title: const Text('Barbería YASSER'),
         actions: [
           IconButton(
+            tooltip: 'Mi perfil',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute<void>(
+                builder: (_) => const ProfileScreen(),
+              ),
+            ),
+            icon: const Icon(Icons.person),
+          ),
+          IconButton(
             tooltip: 'Cerrar sesión',
             onPressed: auth.signOut,
             icon: const Icon(Icons.logout),
           ),
         ],
       ),
-      body: FutureBuilder<Map<String, dynamic>>(
-        future: _profile,
-        builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            return Center(
-              child: Text('No se pudo cargar el perfil: ${snapshot.error}'),
-            );
-          }
-          if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          return Supabase.instance.client.auth.currentUser?.id ==
-                  AppConfig.barberId
-              ? const _BarberHome()
-              : const _ClientHome();
-        },
+      body: ImageBackground(
+        asset: 'assets/images/home_background.jpg',
+        child: FutureBuilder<Map<String, dynamic>>(
+          future: _profile,
+          builder: (context, snapshot) {
+            if (snapshot.hasError) {
+              return Center(
+                child: Text('No se pudo cargar el perfil: ${snapshot.error}'),
+              );
+            }
+            if (!snapshot.hasData) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            return Supabase.instance.client.auth.currentUser?.id ==
+                    AppConfig.barberId
+                ? const _BarberHome()
+                : const _ClientHome();
+          },
+        ),
       ),
     );
   }
@@ -159,16 +194,8 @@ class _ClientHome extends StatelessWidget {
           ),
         ),
         ListTile(
-          leading: const Icon(Icons.history),
-          title: const Text('Mi historial'),
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute<void>(builder: (_) => const HistoryScreen()),
-          ),
-        ),
-        ListTile(
           leading: const Icon(Icons.chat),
-          title: const Text('Chat con YASSER'),
+          title: const Text('Chat con YASSER', style: TextStyle(fontSize: 20)),
           onTap: () => Navigator.push(
             context,
             MaterialPageRoute<void>(builder: (_) => const ChatScreen()),
@@ -219,41 +246,50 @@ class _BarberHomeState extends State<_BarberHome> {
           return const Center(child: CircularProgressIndicator());
         }
         final rows = clientsSnapshot.data!;
-        if (rows.isEmpty) {
-          return const Center(
-            child: Text('Todavía no hay clientes registrados.'),
-          );
-        }
-        return ListView.builder(
-          itemCount: rows.length,
-          itemBuilder: (context, index) {
-            final client = rows[index];
-            return ListTile(
-              leading: const CircleAvatar(child: Icon(Icons.person)),
-              title: Text(client['username'] as String),
-              subtitle: const Text('Abrir chat privado'),
-              trailing: IconButton(
-                tooltip: 'Ver historial de cortes',
-                icon: const Icon(Icons.history),
-                onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute<void>(
-                    builder: (_) =>
-                        HistoryScreen(clientId: client['id'] as String),
+        return ListView(
+          children: [
+            if (rows.isEmpty)
+              const Padding(
+                padding: EdgeInsets.all(20),
+                child: Text(
+                  'Todavía no hay clientes registrados.',
+                  style: TextStyle(fontSize: 18),
+                ),
+              )
+            else
+              for (final client in rows)
+                ListTile(
+                  leading: const CircleAvatar(child: Icon(Icons.person)),
+                  title: Text(
+                    client['username'] as String,
+                    style: const TextStyle(fontSize: 20),
+                  ),
+                  subtitle: const Text(
+                    'Abrir chat privado',
+                    style: TextStyle(fontSize: 16),
+                  ),
+                  trailing: IconButton(
+                    tooltip: 'Ver historial de cortes',
+                    icon: const Icon(Icons.history, size: 28),
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute<void>(
+                        builder: (_) =>
+                            HistoryScreen(clientId: client['id'] as String),
+                      ),
+                    ),
+                  ),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute<void>(
+                      builder: (_) => ChatScreen(
+                        partnerId: client['id'] as String,
+                        partnerName: client['username'] as String,
+                      ),
+                    ),
                   ),
                 ),
-              ),
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute<void>(
-                  builder: (_) => ChatScreen(
-                    partnerId: client['id'] as String,
-                    partnerName: client['username'] as String,
-                  ),
-                ),
-              ),
-            );
-          },
+          ],
         );
       },
     );

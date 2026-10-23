@@ -2,7 +2,7 @@
 
 ## App de comunicación para la barbería YASSER
 
-App Android Flutter para conversar por UUID con los clientes de la barbería. Incluye registro por correo y contraseña, lista de clientes para el barbero, chat en tiempo real mientras la app está conectada, galería, historial de cortes, banner de horario y recordatorio local diario. No solicita teléfonos.
+App Android Flutter para conversar por UUID con los clientes de la barbería. Incluye registro por correo y contraseña, lista de clientes para el barbero, chat en tiempo real, galería administrable, banner de horario compartido y recordatorio local a la hora de apertura. No solicita teléfonos.
 
 ## Reinicio seguro del chat
 
@@ -84,9 +84,23 @@ El chat usa Supabase Realtime mientras el usuario está en línea y la app está
 5. En Supabase → Database → Webhooks, crea un webhook para `public.yasser_messages`, evento `INSERT`, que invoque la función `send-message-push`. Añade el encabezado `x-yasser-webhook-secret` con el mismo valor de `YASSER_WEBHOOK_SECRET`.
 6. Sube el cambio al repositorio para que GitHub Actions cree el nuevo APK; instala esa versión en ambos teléfonos y acepta el permiso de notificaciones.
 
-La función solo envía un aviso genérico, no incluye el contenido privado del mensaje. La tabla `yasser_push_tokens` guarda los tokens por UUID y cada usuario solo puede administrar el suyo. El recordatorio de las 08:00 es una notificación **local** independiente. Android puede restringir alarmas exactas según permisos, ahorro de batería o fabricante; no es posible garantizar ejecución puntual en todos los teléfonos.
+La función solo envía un aviso genérico, no incluye el contenido privado del mensaje. La tabla `yasser_push_tokens` guarda los tokens por UUID y cada usuario solo puede administrar el suyo. El aviso diario de apertura es una notificación **local** independiente de los push de chat. Android puede restringir alarmas exactas según permisos, ahorro de batería o fabricante; no es posible garantizar ejecución puntual en todos los teléfonos.
 
-La alarma local se programa al entrar a la pantalla principal. El banner muestra ABIERTO desde 08:00 hasta antes de 20:00 según el reloj local. Las imágenes de galería son ejemplos y se deben reemplazar por fotografías autorizadas de la barbería.
+La alarma local se programa al entrar a la pantalla principal usando el horario guardado.
+
+## Horario, galería y recursos visuales editables
+
+Antes de usar el horario editable y la galería administrada desde la app, ejecuta una vez [`supabase/management_features.sql`](./supabase/management_features.sql) en SQL Editor. La migración agrega horarios al registro existente del barbero, permite que cada usuario cambie únicamente su nombre visible, crea una galería de lectura para clientes y restringe subir/quitar fotos al UUID del barbero. También crea el bucket público `yasser-gallery` para fotos de cortes; no contiene ni borra los mensajes existentes.
+
+En la app, el barbero abre **Editar horario** para cambiar apertura y cierre; el banner del cliente escucha esos cambios con Realtime. Al tener la app abierta, los teléfonos también actualizan el recordatorio local diario a la nueva hora de apertura. Si el cliente tiene la app cerrada justo cuando el horario se modifica, la alarma local se actualiza cuando vuelva a abrirla; para avisos remotos con la app cerrada hace falta que FCM/webhook esté completamente desplegado.
+
+El barbero administra las fotografías en **Administrar galería**. Los clientes solo consultan la galería y envían una referencia por chat. El perfil permite cambiar el nombre visible propio. Las imágenes que se pueden reemplazar son:
+
+- `assets/images/home_background.jpg`: fondo de inicio.
+- `assets/images/chat_background.jpg`: fondo del chat (se dejó con la misma imagen como base reemplazable).
+- `assets/images/yasser_logo.png`: fuente del icono de la app.
+
+El workflow ejecuta `tool/prepare_android.py` tras generar Android; el script repone los iconos de launcher en `tool/android_icons/mipmap-*` para que Flutter no los sobrescriba con el icono predeterminado al compilar.
 
 ## Archivos principales
 

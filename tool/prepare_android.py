@@ -1,5 +1,6 @@
 import xml.etree.ElementTree as ET
 from pathlib import Path
+import shutil
 
 ANDROID_NS = "http://schemas.android.com/apk/res/android"
 ET.register_namespace("android", ANDROID_NS)
@@ -137,3 +138,12 @@ if google_services_plugin_declaration not in settings:
         1,
     )
 settings_path.write_text(settings, encoding="utf-8")
+
+icon_source = Path("tool/android_icons")
+resource_dir = Path("android/app/src/main/res")
+for icon_dir in icon_source.glob("mipmap-*"):
+    source_icon = icon_dir / "ic_launcher.png"
+    if source_icon.is_file():
+        destination_dir = resource_dir / icon_dir.name
+        destination_dir.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source_icon, destination_dir / source_icon.name)
