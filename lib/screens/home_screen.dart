@@ -11,7 +11,6 @@ import '../services/daily_notification_service.dart';
 import '../services/push_notification_service.dart';
 import '../widgets/image_background.dart';
 import '../widgets/open_status_banner.dart';
-import 'barber_hours_screen.dart';
 import 'chat_screen.dart';
 import 'gallery_screen.dart';
 import 'history_screen.dart';
